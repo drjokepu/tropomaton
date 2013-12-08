@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+import "os"
 import "time"
 
 func main() {
@@ -8,13 +10,23 @@ func main() {
 		panic(err)
 	}
 
-	err = mainLoop(newDb)
-	if err != nil {
-		panic(err)
-	}
+	mainLoopErrorHandler(newDb)
 }
 
 const tvTroperUrlPrefix = "http://tvtropes.org/pmwiki/pmwiki.php/"
+
+func mainLoopErrorHandler(newDb bool) {
+	stillNewDb := newDb
+	for {
+		err := mainLoop(stillNewDb)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			stillNewDb = false
+		} else {
+			return
+		}
+	}
+}
 
 func mainLoop(newDb bool) error {
 	stop := false
@@ -41,7 +53,7 @@ func mainLoop(newDb bool) error {
 			return err
 		}
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(500 * time.Millisecond) // 0.5 seconds
 	}
 
 	return nil
