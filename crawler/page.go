@@ -120,7 +120,7 @@ func listToLinks(linkList *list.List) []link {
 }
 
 func (pl *pageWithLinks) save() error {
-	fmt.Println("   saving:", pl.page.url, "("+strconv.Itoa(len(pl.links))+" outlinks)")
+	fmt.Println("    saving:", pl.page.url, "("+strconv.Itoa(len(pl.links))+" outlinks)")
 
 	err := run(func(tx *sql.Tx) error {
 		err := pl.page.insert(tx)
