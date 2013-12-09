@@ -66,7 +66,7 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 			tagName, _ := tokenizer.TagName()
 			if spellsBody(tagName) {
 				inBody = false
-			} else if spellsA(tagName) && len(href) > 0 {
+			} else if spellsA(tagName) && len(href) > 0 && !strings.Contains(href, "?action=") {
 				aLink := &link{
 					id:       -1,
 					href:     href,
@@ -120,11 +120,11 @@ func listToLinks(linkList *list.List) []link {
 }
 
 func toUtf8(iso8859_1_buf []byte) string {
-    buf := make([]rune, len(iso8859_1_buf))
-    for i, b := range iso8859_1_buf {
-        buf[i] = rune(b)
-    }
-    return string(buf)
+	buf := make([]rune, len(iso8859_1_buf))
+	for i, b := range iso8859_1_buf {
+		buf[i] = rune(b)
+	}
+	return string(buf)
 }
 
 func (pl *pageWithLinks) save() error {

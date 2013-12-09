@@ -4,6 +4,7 @@ import "encoding/json"
 import "io/ioutil"
 
 var sharedConfig map[string]interface{}
+
 const databaseConnectionStringConfigKey = "databaseConnectionString"
 
 func initConfig() {

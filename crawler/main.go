@@ -53,7 +53,7 @@ func mainLoop() error {
 			return err
 		}
 
-		time.Sleep(500 * time.Millisecond) // 0.5 seconds
+		time.Sleep(100 * time.Millisecond) // 0.5 seconds
 	}
 
 	return nil
