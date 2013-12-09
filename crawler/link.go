@@ -18,7 +18,7 @@ func isContentLink(link *link) bool {
 }
 
 func (link *link) insert(tx *sql.Tx) error {
-	const query = "insert into link (href, \"text\", page_from, page_to) values (?, ?, ?, ?)"
+	const query = "insert into link (href, \"text\", page_from, page_to) values ($1, $2, $3, $4) returning id"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
@@ -32,23 +32,23 @@ func (link *link) insert(tx *sql.Tx) error {
 		pageToParam = sql.NullInt64{Int64: int64(link.pageTo), Valid: true}
 	}
 
-	res, err := stmt.Exec(strings.TrimPrefix(link.href, tvTroperUrlPrefix), link.text, link.pageFrom, pageToParam)
+	rows, err := stmt.Query(strings.TrimPrefix(link.href, tvTroperUrlPrefix), link.text, link.pageFrom, pageToParam)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
+	rows.Next()
 
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
+	var id int
+	rows.Scan(&id)
 
-	link.id = int(id64)
+	link.id = int(id)
 
 	return nil
 }
 
 func (link *link) findPage(tx *sql.Tx) error {
-	const query = "select id from page where url = ?"
+	const query = "select id from page where url = $1"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func selectNextLink(tx *sql.Tx) (*link, error) {
 }
 
 func updateIncomingLinksWithPageId(href string, pageId int, tx *sql.Tx) error {
-	const query = "update link set page_to = ? where href = ?"
+	const query = "update link set page_to = $1 where href = $2"
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {

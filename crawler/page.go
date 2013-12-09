@@ -43,7 +43,7 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 				for {
 					key, val, more := tokenizer.TagAttr()
 					if spellsHref(key) {
-						href = string(val)
+						href = toUtf8(val)
 						linkTextBuffer = new(bytes.Buffer)
 						break
 					} else {
@@ -70,7 +70,7 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 				aLink := &link{
 					id:       -1,
 					href:     href,
-					text:     strings.TrimSpace(linkTextBuffer.String()),
+					text:     strings.TrimSpace(toUtf8(linkTextBuffer.Bytes())),
 					pageFrom: -1,
 					pageTo:   -1,
 				}
@@ -86,7 +86,7 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 	parsedPage := &page{
 		id:   -1,
 		url:  pageUrl,
-		text: strings.TrimSpace(pageTextBuffer.String()),
+		text: strings.TrimSpace(toUtf8(pageTextBuffer.Bytes())),
 	}
 
 	links := listToLinks(linkList)
@@ -117,6 +117,14 @@ func listToLinks(linkList *list.List) []link {
 		cursor++
 	}
 	return linksArray
+}
+
+func toUtf8(iso8859_1_buf []byte) string {
+    buf := make([]rune, len(iso8859_1_buf))
+    for i, b := range iso8859_1_buf {
+        buf[i] = rune(b)
+    }
+    return string(buf)
 }
 
 func (pl *pageWithLinks) save() error {
@@ -159,30 +167,30 @@ func (page *page) insert(tx *sql.Tx) error {
 		return nil
 	}
 
-	const query = "insert into page (url, \"text\") values (?, ?)"
+	const query = "insert into page (url, \"text\") values ($1, $2) returning id"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	res, err := stmt.Exec(strings.TrimPrefix(page.url, tvTroperUrlPrefix), page.text)
+	rows, err := stmt.Query(strings.TrimPrefix(page.url, tvTroperUrlPrefix), page.text)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
+	rows.Next()
 
-	id64, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
+	var id int64
+	rows.Scan(&id)
 
-	page.id = int(id64)
+	page.id = int(id)
 
 	return nil
 }
 
 func (page *page) find(tx *sql.Tx) (int, error) {
-	const query = "select id from page where url = ?"
+	const query = "select id from page where url = $1"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return -1, err

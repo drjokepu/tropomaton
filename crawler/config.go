@@ -3,27 +3,24 @@ package main
 import "encoding/json"
 import "io/ioutil"
 
-var sharedConfig *config
-
-type config struct {
-	databaseConnectionString string
-}
+var sharedConfig map[string]interface{}
+const databaseConnectionStringConfigKey = "databaseConnectionString"
 
 func initConfig() {
 	sharedConfig = loadConfig()
 }
 
-func loadConfig() *config {
-	bytes, err := ioutil.ReadFile("crawler.config.json")
+func loadConfig() map[string]interface{} {
+	bytes, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		panic(err)
 	}
 
-	var result config
+	var result map[string]interface{}
 	err = json.Unmarshal(bytes, &result)
 	if err != nil {
 		panic(err)
 	}
 
-	return &result
+	return result
 }

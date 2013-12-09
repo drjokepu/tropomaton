@@ -4,7 +4,7 @@ import "database/sql"
 import _ "github.com/lib/pq"
 
 func run(f func(*sql.Tx) error) error {
-	db, err := sql.Open("postgres", sharedConfig.databaseConnectionString)
+	db, err := sql.Open("postgres", sharedConfig[databaseConnectionStringConfigKey].(string))
 	if err != nil {
 		return err
 	}
