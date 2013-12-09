@@ -5,30 +5,25 @@ import "os"
 import "time"
 
 func main() {
-	newDb, err := initdb()
-	if err != nil {
-		panic(err)
-	}
-
-	mainLoopErrorHandler(newDb)
+	initConfig()
+	mainLoopErrorHandler()
 }
 
 const tvTroperUrlPrefix = "http://tvtropes.org/pmwiki/pmwiki.php/"
 
-func mainLoopErrorHandler(newDb bool) {
-	stillNewDb := newDb
+func mainLoopErrorHandler() {
 	for {
-		err := mainLoop(stillNewDb)
+		err := mainLoop()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
-			stillNewDb = false
+			time.Sleep(5 * time.Second) // 0.5 seconds
 		} else {
 			return
 		}
 	}
 }
 
-func mainLoop(newDb bool) error {
+func mainLoop() error {
 	stop := false
 	for !stop {
 		nextLink, err := getNextLink()
@@ -38,7 +33,12 @@ func mainLoop(newDb bool) error {
 
 		var nextUrl string
 		if nextLink == nil {
-			if newDb {
+			hasAnyPagesAtAll, err := hasAnyPages()
+			if err != nil {
+				return err
+			}
+
+			if !hasAnyPagesAtAll {
 				nextUrl = "Main/HomePage"
 			} else {
 				stop = true

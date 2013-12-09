@@ -203,3 +203,32 @@ func (page *page) find(tx *sql.Tx) (int, error) {
 	rows.Scan(&id)
 	return id, nil
 }
+
+func hasAnyPages() (bool, error) {
+	var result bool
+
+	err := run(func(tx *sql.Tx) error {
+		localResult, err := hasAnyPagesWithTx(tx)
+		result = localResult
+		return err
+	})
+
+	return result, err
+}
+
+func hasAnyPagesWithTx(tx *sql.Tx) (bool, error) {
+	const query = "select true from page limit 1"
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return false, err
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.Query()
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	return rows.Next(), nil
+}
