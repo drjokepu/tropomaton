@@ -1,6 +1,7 @@
 create table page (
 	id serial not null, 
 	url text not null, 
+	title text not null,
 	"text" text not null,
 	constraint pk_page primary key (id),
 	constraint uk_page_url unique (url)

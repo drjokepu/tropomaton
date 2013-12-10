@@ -5,13 +5,15 @@ import "code.google.com/p/go.net/html"
 import "container/list"
 import "database/sql"
 import "fmt"
+import "regexp"
 import "strconv"
 import "strings"
 
 type page struct {
-	id   int
-	url  string
-	text string
+	id    int
+	url   string
+	title string
+	text  string
 }
 
 type pageWithLinks struct {
@@ -19,13 +21,17 @@ type pageWithLinks struct {
 	links []link
 }
 
-func parseHtml(pageUrl, contents string) *pageWithLinks {
+func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 	fmt.Println("   parsing:", pageUrl)
 
 	inBody := false
+	inScript := false
 	stop := false
 	href := ""
+	inPageTitle := 0
+	inWikiText := 0
 	pageTextBuffer := new(bytes.Buffer)
+	pageTitleTextBuffer := new(bytes.Buffer)
 	linkTextBuffer := new(bytes.Buffer)
 	linkList := list.New()
 	tokenizer := html.NewTokenizer(strings.NewReader(contents))
@@ -36,27 +42,52 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 		case html.ErrorToken:
 			stop = true
 		case html.StartTagToken:
+			if inPageTitle > 0 {
+				inPageTitle++
+			}
+
+			if inWikiText > 0 {
+				inWikiText++
+			}
+
 			tagName, hasAttr := tokenizer.TagName()
 			if spellsBody(tagName) {
 				inBody = true
-			} else if spellsA(tagName) && hasAttr {
+			} else if spells(tagName, "script") {
+				inScript = true
+			} else if hasAttr {
 				for {
 					key, val, more := tokenizer.TagAttr()
-					if spellsHref(key) {
-						href = toUtf8(val)
-						linkTextBuffer = new(bytes.Buffer)
-						break
-					} else {
-						if !more {
+					if (getAllLinks || inWikiText > 0) && spellsA(tagName) {
+						if spellsHref(key) {
+							href = toUtf8(val)
+							linkTextBuffer = new(bytes.Buffer)
 							break
 						}
+					} else if spells(tagName, "div") {
+						if spells(key, "class") && spells(val, "pagetitle") {
+							inPageTitle = 1
+						} else if spells(key, "id") && spells(val, "wikitext") {
+							inWikiText = 1
+						}
+					}
+
+					if !more {
+						break
 					}
 				}
 			}
 		case html.TextToken:
 			if inBody {
 				tagText := tokenizer.Text()
-				pageTextBuffer.Write(tagText)
+
+				if inWikiText > 0 && !inScript {
+					pageTextBuffer.Write(tagText)
+				}
+
+				if inPageTitle > 0 {
+					pageTitleTextBuffer.Write(tagText)
+				}
 
 				if len(href) > 0 {
 					linkTextBuffer.Write(tagText)
@@ -66,6 +97,8 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 			tagName, _ := tokenizer.TagName()
 			if spellsBody(tagName) {
 				inBody = false
+			} else if spells(tagName, "script") {
+				inScript = false
 			} else if spellsA(tagName) && len(href) > 0 && !strings.Contains(href, "?action=") {
 				aLink := &link{
 					id:       -1,
@@ -80,13 +113,22 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 				href = ""
 				linkTextBuffer = new(bytes.Buffer)
 			}
+
+			if inPageTitle > 0 {
+				inPageTitle--
+			}
+
+			if inWikiText > 0 {
+				inWikiText--
+			}
 		}
 	}
 
 	parsedPage := &page{
-		id:   -1,
-		url:  pageUrl,
-		text: strings.TrimSpace(toUtf8(pageTextBuffer.Bytes())),
+		id:    -1,
+		url:   pageUrl,
+		title: stripExtraWhitespace(pageTitleTextBuffer.Bytes()),
+		text:  stripExtraWhitespace(pageTextBuffer.Bytes()),
 	}
 
 	links := listToLinks(linkList)
@@ -97,16 +139,36 @@ func parseHtml(pageUrl, contents string) *pageWithLinks {
 	}
 }
 
+var extraWhitespaceRegex = regexp.MustCompile("\\s\\s+")
+
+func stripExtraWhitespace(input []byte) string {
+	return strings.TrimSpace(toUtf8(extraWhitespaceRegex.ReplaceAll(input, []byte{' '})))
+}
+
+func spells(bytes []byte, what string) bool {
+	if len(bytes) != len(what) {
+		return false
+	}
+
+	for i := 0; i < len(what); i++ {
+		if bytes[i] != what[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
 func spellsA(bytes []byte) bool {
-	return len(bytes) == 1 && (bytes[0] == 'a' || bytes[0] == 'A')
+	return spells(bytes, "a")
 }
 
 func spellsHref(bytes []byte) bool {
-	return len(bytes) == 4 && bytes[0] == 'h' && bytes[1] == 'r' && bytes[2] == 'e' && bytes[3] == 'f'
+	return spells(bytes, "href")
 }
 
 func spellsBody(bytes []byte) bool {
-	return len(bytes) == 4 && bytes[0] == 'b' && bytes[1] == 'o' && bytes[2] == 'd' && bytes[3] == 'y'
+	return spells(bytes, "body")
 }
 
 func listToLinks(linkList *list.List) []link {
@@ -167,14 +229,14 @@ func (page *page) insert(tx *sql.Tx) error {
 		return nil
 	}
 
-	const query = "insert into page (url, \"text\") values ($1, $2) returning id"
+	const query = "insert into page (url, title, \"text\") values ($1, $2, $3) returning id"
 	stmt, err := tx.Prepare(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(strings.TrimPrefix(page.url, tvTroperUrlPrefix), page.text)
+	rows, err := stmt.Query(strings.TrimPrefix(page.url, tvTroperUrlPrefix), page.title, page.text)
 	if err != nil {
 		return err
 	}

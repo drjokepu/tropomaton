@@ -26,6 +26,7 @@ func mainLoopErrorHandler() {
 func mainLoop() error {
 	stop := false
 	for !stop {
+		getAllLinks := false
 		nextLink, err := getNextLink()
 		if err != nil {
 			return err
@@ -40,6 +41,7 @@ func mainLoop() error {
 
 			if !hasAnyPagesAtAll {
 				nextUrl = "Main/HomePage"
+				getAllLinks = true
 			} else {
 				stop = true
 				break
@@ -48,12 +50,12 @@ func mainLoop() error {
 			nextUrl = nextLink.href
 		}
 
-		err = process(tvTroperUrlPrefix + nextUrl)
+		err = process(tvTroperUrlPrefix+nextUrl, getAllLinks)
 		if err != nil {
 			return err
 		}
 
-		time.Sleep(100 * time.Millisecond) // 0.5 seconds
+		time.Sleep(100 * time.Millisecond) // 0.1 seconds
 	}
 
 	return nil
