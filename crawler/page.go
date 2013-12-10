@@ -30,6 +30,7 @@ func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 	href := ""
 	inPageTitle := 0
 	inWikiText := 0
+
 	pageTextBuffer := new(bytes.Buffer)
 	pageTitleTextBuffer := new(bytes.Buffer)
 	linkTextBuffer := new(bytes.Buffer)
@@ -55,7 +56,9 @@ func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 				inBody = true
 			} else if spells(tagName, "script") {
 				inScript = true
-			} else if hasAttr {
+			}
+
+			if hasAttr {
 				for {
 					key, val, more := tokenizer.TagAttr()
 					if (getAllLinks || inWikiText > 0) && spellsA(tagName) {
@@ -85,7 +88,7 @@ func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 					pageTextBuffer.Write(tagText)
 				}
 
-				if inPageTitle > 0 {
+				if inPageTitle > 0 && inPageTitle <= 2 {
 					pageTitleTextBuffer.Write(tagText)
 				}
 
