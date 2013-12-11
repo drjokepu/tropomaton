@@ -1,10 +1,8 @@
 package main
 
-import "bytes"
-import "code.google.com/p/go.net/html"
-import "container/list"
 import "database/sql"
 import "fmt"
+import "github.com/PuerkitoBio/goquery"
 import "regexp"
 import "strconv"
 import "strings"
@@ -24,117 +22,22 @@ type pageWithLinks struct {
 func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 	fmt.Println("   parsing:", pageUrl)
 
-	inBody := false
-	inScript := false
-	stop := false
-	href := ""
-	inPageTitle := 0
-	inWikiText := 0
-
-	pageTextBuffer := new(bytes.Buffer)
-	pageTitleTextBuffer := new(bytes.Buffer)
-	linkTextBuffer := new(bytes.Buffer)
-	linkList := list.New()
-	tokenizer := html.NewTokenizer(strings.NewReader(contents))
-
-	for !stop {
-		token := tokenizer.Next()
-		switch token {
-		case html.ErrorToken:
-			stop = true
-		case html.StartTagToken:
-			if inPageTitle > 0 {
-				inPageTitle++
-			}
-
-			if inWikiText > 0 {
-				inWikiText++
-			}
-
-			tagName, hasAttr := tokenizer.TagName()
-			if spellsBody(tagName) {
-				inBody = true
-			} else if spells(tagName, "script") {
-				inScript = true
-			}
-
-			if hasAttr {
-				for {
-					key, val, more := tokenizer.TagAttr()
-					if (getAllLinks || inWikiText > 0) && spellsA(tagName) {
-						if spellsHref(key) {
-							href = toUtf8(val)
-							linkTextBuffer = new(bytes.Buffer)
-							break
-						}
-					} else if spells(tagName, "div") {
-						if spells(key, "class") && spells(val, "pagetitle") {
-							inPageTitle = 1
-						} else if spells(key, "id") && spells(val, "wikitext") {
-							inWikiText = 1
-						}
-					}
-
-					if !more {
-						break
-					}
-				}
-			}
-		case html.TextToken:
-			if inBody {
-				tagText := tokenizer.Text()
-
-				if inWikiText > 0 && !inScript {
-					pageTextBuffer.Write(tagText)
-				}
-
-				if inPageTitle > 0 && inPageTitle <= 2 {
-					pageTitleTextBuffer.Write(tagText)
-				}
-
-				if len(href) > 0 {
-					linkTextBuffer.Write(tagText)
-				}
-			}
-		case html.EndTagToken:
-			tagName, _ := tokenizer.TagName()
-			if spellsBody(tagName) {
-				inBody = false
-			} else if spells(tagName, "script") {
-				inScript = false
-			} else if spellsA(tagName) && len(href) > 0 && !strings.Contains(href, "?action=") {
-				aLink := &link{
-					id:       -1,
-					href:     href,
-					text:     strings.TrimSpace(toUtf8(linkTextBuffer.Bytes())),
-					pageFrom: -1,
-					pageTo:   -1,
-				}
-				if isContentLink(aLink) {
-					linkList.PushBack(aLink)
-				}
-				href = ""
-				linkTextBuffer = new(bytes.Buffer)
-			}
-
-			if inPageTitle > 0 {
-				inPageTitle--
-			}
-
-			if inWikiText > 0 {
-				inWikiText--
-			}
-		}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(contents))
+	if err != nil {
+		panic(err)
 	}
+
+	title := extractTitleFromDocument(doc)
+	text := extractTextFromDocument(doc)
 
 	parsedPage := &page{
 		id:    -1,
 		url:   pageUrl,
-		title: stripExtraWhitespace(pageTitleTextBuffer.Bytes()),
-		text:  stripExtraWhitespace(pageTextBuffer.Bytes()),
+		title: title,
+		text:  text,
 	}
 
-	links := listToLinks(linkList)
+	links := extractLinksFromDocument(doc, getAllLinks)
 
 	return &pageWithLinks{
 		page:  parsedPage,
@@ -142,49 +45,61 @@ func parseHtml(pageUrl, contents string, getAllLinks bool) *pageWithLinks {
 	}
 }
 
-var extraWhitespaceRegex = regexp.MustCompile("\\s\\s+")
-
-func stripExtraWhitespace(input []byte) string {
-	return strings.TrimSpace(toUtf8(extraWhitespaceRegex.ReplaceAll(input, []byte{' '})))
-}
-
-func spells(bytes []byte, what string) bool {
-	if len(bytes) != len(what) {
-		return false
+func extractTitleFromDocument(doc *goquery.Document) string {
+	var title string
+	pageTitleDiv := doc.Find("div.pagetitle")
+	if pageTitleDiv.ChildrenFiltered(":not(span)").Length() > 0 {
+		title = pageTitleDiv.ChildrenFiltered("span").Text()
+	} else {
+		title = pageTitleDiv.Text()
 	}
 
-	for i := 0; i < len(what); i++ {
-		if bytes[i] != what[i] {
-			return false
+	return stripExtraWhitespace(title)
+}
+
+func extractTextFromDocument(doc *goquery.Document) string {
+	return stripExtraWhitespace(doc.Find("#wikitext").Text())
+}
+
+func extractLinksFromDocument(doc *goquery.Document, getAllLinks bool) []link {
+	var linkElements *goquery.Selection
+	if getAllLinks {
+		linkElements = doc.Find("a")
+	} else {
+		linkElements = doc.Find("#wikitext a")
+	}
+
+	links := make([]link, 0)
+	linkElements.Each(func(index int, linkElement *goquery.Selection) {
+		href, exists := linkElement.Attr("href")
+		if !exists {
+			return
 		}
-	}
 
-	return true
+		link := link{
+			id:       -1,
+			href:     strings.TrimSpace(toUtf8(href)),
+			text:     stripExtraWhitespace(linkElement.Text()),
+			pageFrom: -1,
+			pageTo:   -1,
+		}
+
+		if link.isContentLink() {
+			links = append(links, link)
+		}
+	})
+
+	return links
 }
 
-func spellsA(bytes []byte) bool {
-	return spells(bytes, "a")
+var extraWhitespaceRegex = regexp.MustCompile("[\\s]{2,}")
+
+func stripExtraWhitespace(input string) string {
+	return strings.TrimSpace(extraWhitespaceRegex.ReplaceAllString(toUtf8(input), " "))
 }
 
-func spellsHref(bytes []byte) bool {
-	return spells(bytes, "href")
-}
-
-func spellsBody(bytes []byte) bool {
-	return spells(bytes, "body")
-}
-
-func listToLinks(linkList *list.List) []link {
-	linksArray := make([]link, linkList.Len())
-	cursor := 0
-	for e := linkList.Front(); e != nil; e = e.Next() {
-		linksArray[cursor] = *e.Value.(*link)
-		cursor++
-	}
-	return linksArray
-}
-
-func toUtf8(iso8859_1_buf []byte) string {
+func toUtf8(iso8859_1_str string) string {
+	iso8859_1_buf := []byte(iso8859_1_str)
 	buf := make([]rune, len(iso8859_1_buf))
 	for i, b := range iso8859_1_buf {
 		buf[i] = rune(b)

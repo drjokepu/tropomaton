@@ -11,10 +11,11 @@ type link struct {
 	pageTo   int
 }
 
-func isContentLink(link *link) bool {
+func (link *link) isContentLink() bool {
 	const filterPrefix = "Main/"
-	return strings.HasPrefix(link.href, filterPrefix) ||
-		strings.HasPrefix(link.href, tvTroperUrlPrefix+filterPrefix)
+	return (strings.HasPrefix(link.href, filterPrefix) ||
+		strings.HasPrefix(link.href, tvTroperUrlPrefix+filterPrefix)) &&
+		!strings.Contains(link.href, "?action=")
 }
 
 func (link *link) insert(tx *sql.Tx) error {
