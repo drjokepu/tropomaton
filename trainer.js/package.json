@@ -1,0 +1,20 @@
+{
+  "name": "tropomaton-trainer",
+  "version": "0.0.1",
+  "author": "Tamas Czinege <tomi.czinege@gmail.com>",
+  "description": "Tropomaton Trainer",
+  "dependencies": {
+    "express": "*",
+    "jade": "*",
+    "pg": "*",
+    "pgsubst": "*",
+    "q": "*"
+  },
+  "devDependencies":
+  {
+    "grunt": "*",
+    "grunt-contrib-jshint": "*",
+    "grunt-contrib-less": "*",
+    "mocha": "*"
+  }
+}

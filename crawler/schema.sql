@@ -3,6 +3,8 @@ create table page (
 	url text not null, 
 	title text not null,
 	"text" text not null,
+	class integer,
+	human_class integer,
 	constraint pk_page primary key (id),
 	constraint uk_page_url unique (url)
 );
