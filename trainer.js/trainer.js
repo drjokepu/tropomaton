@@ -47,7 +47,7 @@ app.get('/train', function(req, res) {
 app.post('/train/submit', function(req, res) {
 	page.postTraining(req.body.pageId, req.body.class).then(function() {
 		res.redirect('/train');
-	});
+	}).done();
 });
 
 app.listen(8080);

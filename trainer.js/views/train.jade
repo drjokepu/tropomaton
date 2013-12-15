@@ -23,11 +23,11 @@ html(lang="en")
 							button.btn.btn-info(type="submit") Trope
 						form.button-form(method="POST", action="/train/submit")
 							input(type="hidden", name="pageId", value="#{ model.page.id }")
-							input(type="hidden", name="class", value="0")
+							input(type="hidden", name="class", value="1")
 							button.btn.btn-warning(type="submit") Work
 						form.button-form(method="POST", action="/train/submit")
 							input(type="hidden", name="pageId", value="#{ model.page.id }")
-							input(type="hidden", name="class", value="0")
+							input(type="hidden", name="class", value="2")
 							button.btn.btn-default(type="submit") Other
 		div.training-body
 			iframe(src="http://tvtropes.org/pmwiki/pmwiki.php/#{ model.page.url }", sandbox)

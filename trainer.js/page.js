@@ -1,5 +1,8 @@
-var db = require('./db.js');
+var http = require('http');
 var Q = require('q');
+var querystring = require('querystring');
+
+var db = require('./db.js');
 
 var page = {
 	stats: function(client) {
@@ -36,9 +39,37 @@ var page = {
 		.then(makePopulateWithPageLinkStats(client));
 	},
 	postTraining: function(pageId, pageClass) {
-		return Q.fcall(function() {
-			
+		var deferred = Q.defer();
+		var postData = querystring.stringify({
+			pageId: pageId,
+			class: pageClass
 		});
+		
+		var request = http.request({
+			host: 'localhost',
+			port: '8877',
+			method: 'POST',
+			path: '/train',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+				'Content-Length': postData.length
+			}
+		}, function(res) {
+			if (res.statusCode === 200) {
+				deferred.resolve();
+			} else {
+				deferred.reject(new Error('Response: ' + res.statusCode));
+			}
+		});
+		
+		request.on('error', function(error) {
+			deferred.reject(error);	
+		});
+		
+		request.write(postData);
+		request.end();
+		
+		return deferred.promise;
 	}
 };
 
