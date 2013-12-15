@@ -5,6 +5,7 @@
   "description": "Tropomaton Trainer",
   "dependencies": {
     "express": "*",
+	"i": "*",
     "jade": "*",
     "pg": "*",
     "pgsubst": "*",

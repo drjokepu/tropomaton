@@ -6,7 +6,8 @@ create table page (
 	class integer,
 	human_class integer,
 	constraint pk_page primary key (id),
-	constraint uk_page_url unique (url)
+	constraint uk_page_url unique (url),
+	constraint chk_page_human_class check (human_class is null or humas_class = class)
 );
 
 create table link (

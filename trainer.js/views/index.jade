@@ -7,6 +7,25 @@ html(lang="en")
 		div.container
 			header.page-header
 				h1 Tropomaton Trainer
+			h4.row
+				div.col-md-12 High Level Stats
 			div.row
+				div.col-md-2.stats-label Pages:
+				div.col-md-2 #{ model.stats.totalPageCount }
+			div.row
+				div.col-md-2.stats-label Trained Pages:
+				div.col-md-2 #{ model.stats.trainedPageCount }
+			h4.row
+				div.col-md-12 Class Stats
+			div.row
+				div.col-md-2.stats-label Trope:
+				div.col-md-2 #{ model.stats.classes[0] ? model.stats.classes[0].count : 0 }
+			div.row
+				div.col-md-2.stats-label Work:
+				div.col-md-2 #{ model.stats.classes[1] ? model.stats.classes[1].count : 0 }
+			div.row
+				div.col-md-2.stats-label Other:
+				div.col-md-2 #{ model.stats.classes[2] ? model.stats.classes[2].count : 0 }
+			div.row.buttons-row
 				div.col-md-12
 					a.btn.btn-primary.btn-lg(href="/train") Start Training

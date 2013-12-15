@@ -1,0 +1,33 @@
+doctype 5
+html(lang="en")
+	head
+		title #{ (model.page.title ? model.page.title : model.page.url) } - Tropomaton Trainer
+		link(rel="stylesheet", href="/content/style.css")
+	body
+		div.training-header
+			div.row
+				div.col-md-6
+					div.row
+						div.col-md-12.trained-page-title #{ model.page.title }
+					div.row
+						div.col-md-12
+							a(href="http://tvtropes.org/pmwiki/pmwiki.php/#{ model.page.url }") #{ model.page.url }
+				div.col-md-1
+					div.row #{ model.page.linkStats.inbound } inbound
+					div.row #{ model.page.linkStats.outbound } outbound
+				div.col-md-5
+					div.row
+						form.button-form(method="POST", action="/train/submit")
+							input(type="hidden", name="pageId", value="#{ model.page.id }")
+							input(type="hidden", name="class", value="0")
+							button.btn.btn-info(type="submit") Trope
+						form.button-form(method="POST", action="/train/submit")
+							input(type="hidden", name="pageId", value="#{ model.page.id }")
+							input(type="hidden", name="class", value="0")
+							button.btn.btn-warning(type="submit") Work
+						form.button-form(method="POST", action="/train/submit")
+							input(type="hidden", name="pageId", value="#{ model.page.id }")
+							input(type="hidden", name="class", value="0")
+							button.btn.btn-default(type="submit") Other
+		div.training-body
+			iframe(src="http://tvtropes.org/pmwiki/pmwiki.php/#{ model.page.url }", sandbox)
