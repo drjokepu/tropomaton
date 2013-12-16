@@ -29,6 +29,7 @@ app.get('/', function(req, res) {
 });
 
 app.get('/train', function(req, res) {
+	var attempts = 0;
 	function handle() {
 		var nextPage = null;
 		db.run(function (client) {
@@ -44,7 +45,12 @@ app.get('/train', function(req, res) {
 					}
 				});
 			} else {
-				process.nextTick(handle);
+				if (attempts > 32) {
+					res.redirect('/');
+				} else {
+					attempts++;
+					process.nextTick(handle);
+				}
 			}
 		});
 	}
