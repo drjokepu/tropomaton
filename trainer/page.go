@@ -40,3 +40,15 @@ func getPage(pageId int, tx *sql.Tx) (*page, error) {
 		text:  text,
 	}, nil
 }
+
+func (page *page) updateHumanClass(class int, tx *sql.Tx) error {
+	const query = "update page set class = $1, human_class = $1 where id = $2"
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(class, page.id)
+	return err
+}

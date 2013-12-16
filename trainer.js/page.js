@@ -60,6 +60,8 @@ var page = {
 			} else {
 				deferred.reject(new Error('Response: ' + res.statusCode));
 			}
+			
+			res.read();
 		});
 		
 		request.on('error', function(error) {
