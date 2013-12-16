@@ -49,12 +49,13 @@ app.get('/train', function(req, res) {
 					res.redirect('/');
 				} else {
 					attempts++;
-					console.log("attempt " + (attempt + 1));
 					process.nextTick(handle);
 				}
 			}
 		});
 	}
+	
+	handle();
 });
 
 app.post('/train/submit', function(req, res) {
