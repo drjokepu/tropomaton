@@ -29,19 +29,25 @@ app.get('/', function(req, res) {
 });
 
 app.get('/train', function(req, res) {
-	var nextPage = null;
-	db.run(function (client) {
-		return page.nextUntrained(client).then(function(nextPageArg) {
-			nextPage = nextPageArg;
-		});
-	})
-	.then(function() {
-		res.render('train', {
-			model: {
-				page: nextPage
+	function handle() {
+		var nextPage = null;
+		db.run(function (client) {
+			return page.nextUntrained(client).then(function(nextPageArg) {
+				nextPage = nextPageArg;
+			});
+		})
+		.then(function() {
+			if (nextPage) {
+				res.render('train', {
+					model: {
+						page: nextPage
+					}
+				});
+			} else {
+				process.nextTick(handle);
 			}
 		});
-	});
+	}
 });
 
 app.post('/train/submit', function(req, res) {

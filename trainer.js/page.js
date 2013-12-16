@@ -19,10 +19,10 @@ var page = {
 	},
 	nextUntrained: function(client) {
 		var commandText =
-			"select id, url, title " +
-			"from page " +
-			"where id >= floor(random() * (select max(id) from page))::integer " +
-			"and human_class is null " +
+			"with params as (select 1 + floor(random() * (select max(id) from page))::integer rnd) " +
+			"select p.id, p.url, p.title " +
+			"from params r " +
+			"inner join page p on (p.id = r.rnd and p.human_class is null) " +
 			"limit 1";
 		
 		return db.query(client, commandText, { }).then(function(result) {
