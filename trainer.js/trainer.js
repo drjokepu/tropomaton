@@ -49,6 +49,7 @@ app.get('/train', function(req, res) {
 					res.redirect('/');
 				} else {
 					attempts++;
+					console.log("attempt " + (attempt + 1));
 					process.nextTick(handle);
 				}
 			}
