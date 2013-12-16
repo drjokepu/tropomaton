@@ -3,6 +3,7 @@ package main
 import "database/sql"
 import "fmt"
 import "github.com/jbrukh/bayesian"
+import "os"
 import "strings"
 import "syscall"
 
@@ -16,33 +17,56 @@ const (
 const classifierFilename = "classifier.dat"
 
 func train(pageId, class int) error {
-	fmt.Println("Page:", pageId, "Class:", class)
-
 	err := run(func(tx *sql.Tx) error {
 		page, err := getPage(pageId, tx)
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to get page from database.")
 			return err
 		}
-		page = page
+		
+		fmt.Println("Page:", pageId, page.url, page.title, "Class:", class)
+
+		err = page.updateHumanClass(class, tx)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to update page class in database.")
+			return err
+		}
 
 		err = acquireClassifierLock()
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to acquire exclusive lock to classifier data file.")
 			return err
 		}
 
 		defer releaseClassifierLock()
 
-		classifier, err := loadClassifier()
+		var classifier *bayesian.Classifier
+		isEmpty, err := isClassifierEmpty()
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to determine if classifier is empty.")
 			return err
 		}
 
-		learnInClasses(getDocument(page.text), getBayesianClasses(class), classifier)
+		if isEmpty {
+			classifier = bayesian.NewClassifier(trope, notTrope, work, notWork)
+		} else {
+			classifier, err = loadClassifier()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Failed to load classifier.")
+				return err
+			}
+		}
+
+		bayesianClasses := getBayesianClasses(class)
+		learnInClasses(getDocument(page.text), bayesianClasses, classifier)
 
 		err = saveClassifier(classifier)
 		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save classifier to data file.")
 			return err
 		}
+
+		fmt.Println("Learned as:", bayesianClasses)
 
 		return nil
 	})
@@ -83,6 +107,23 @@ func releaseClassifierLock() error {
 
 	err = syscall.Flock(fd, syscall.LOCK_UN)
 	return err
+}
+
+func isClassifierEmpty() (bool, error) {
+	fd, err := openClassifier()
+	if err != nil {
+		return false, err
+	}
+
+	defer syscall.Close(fd)
+
+	var stat syscall.Stat_t
+	err = syscall.Fstat(fd, &stat)
+	if err != nil {
+		return false, err
+	}
+
+	return stat.Size == 0, nil
 }
 
 func loadClassifier() (*bayesian.Classifier, error) {
