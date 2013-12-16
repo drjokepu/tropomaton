@@ -23,8 +23,6 @@ func train(pageId, class int) error {
 			fmt.Fprintln(os.Stderr, "Failed to get page from database.")
 			return err
 		}
-		
-		fmt.Println("Page:", pageId, page.url, page.title, "Class:", class)
 
 		err = page.updateHumanClass(class, tx)
 		if err != nil {
@@ -65,8 +63,8 @@ func train(pageId, class int) error {
 			fmt.Fprintln(os.Stderr, "Failed to save classifier to data file.")
 			return err
 		}
-
-		fmt.Println("Learned as:", bayesianClasses)
+		
+		fmt.Println(pageId, page.url, page.title, "---", class, bayesianClasses)
 
 		return nil
 	})

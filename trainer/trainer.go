@@ -1,5 +1,6 @@
 package main
 
+import "flag"
 import "fmt"
 import "net/http"
 import "os"
@@ -8,6 +9,18 @@ import "strconv"
 func main() {
 	initConfig()
 
+	statsFlag := flag.Bool("stats", false, "Display stats")
+	flag.Parse()
+	
+	switch {
+	case *statsFlag:
+		printStats();
+	default:
+		listen();
+	}
+}
+
+func listen() {
 	http.HandleFunc("/train", func(writer http.ResponseWriter, request *http.Request) {
 		err := request.ParseForm()
 		if err != nil {
@@ -44,4 +57,19 @@ func main() {
 func reportError(writer http.ResponseWriter, err error) {
 	fmt.Fprintln(os.Stderr, err.Error())
 	http.Error(writer, "Internal Server Error", 500)
+}
+
+func printStats() {
+	classifier, err := loadClassifier()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Cannot load classifier:", err.Error())
+	}
+	
+	fmt.Println(classifier.Learned(), "learned")
+	fmt.Println(classifier.Seen(), "seen")
+	wordCounts := classifier.WordCount()
+	fmt.Println(wordCounts[0], "trope")
+	fmt.Println(wordCounts[1], "not trope")
+	fmt.Println(wordCounts[2], "work")
+	fmt.Println(wordCounts[3], "not work")
 }
