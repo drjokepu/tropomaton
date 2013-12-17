@@ -5,6 +5,8 @@ create table page (
 	"text" text not null,
 	class integer,
 	human_class integer,
+	ref_count integer not null default 0,
+	missing boolean default false,
 	constraint pk_page primary key (id),
 	constraint uk_page_url unique (url),
 	constraint chk_page_human_class check (human_class is null or human_class = class)
