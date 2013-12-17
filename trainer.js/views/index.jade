@@ -10,22 +10,22 @@ html(lang="en")
 			h4.row
 				div.col-md-12 High Level Stats
 			div.row
-				div.col-md-2.stats-label Pages:
-				div.col-md-2 #{ model.stats.totalPageCount }
+				div.col-md-2.col-sm-3.col-xs-6.stats-label Pages:
+				div.col-md-2.col-sm-3 #{ model.stats.totalPageCount }
 			div.row
-				div.col-md-2.stats-label Trained Pages:
-				div.col-md-2 #{ model.stats.trainedPageCount }
+				div.col-md-2.col-sm-3.col-xs-6.stats-label Trained Pages:
+				div.col-md-2.col-sm-3.col-xs-6 #{ model.stats.trainedPageCount }
 			h4.row
 				div.col-md-12 Class Stats
 			div.row
-				div.col-md-2.stats-label Trope:
-				div.col-md-2 #{ model.stats.classes[0] ? model.stats.classes[0].count : 0 }
+				div.col-md-2.col-sm-3.col-xs-6.stats-label Trope:
+				div.col-md-2.col-sm-3.col-xs-6 #{ model.stats.classes[0] ? model.stats.classes[0].count : 0 }
 			div.row
-				div.col-md-2.stats-label Work:
-				div.col-md-2 #{ model.stats.classes[1] ? model.stats.classes[1].count : 0 }
+				div.col-md-2.col-sm-3.col-xs-6.stats-label Work:
+				div.col-md-2.col-sm-3.col-xs-6 #{ model.stats.classes[1] ? model.stats.classes[1].count : 0 }
 			div.row
-				div.col-md-2.stats-label Other:
-				div.col-md-2 #{ model.stats.classes[2] ? model.stats.classes[2].count : 0 }
+				div.col-md-2.col-sm-3.col-xs-6.stats-label Other:
+				div.col-md-2.col-sm-3.col-xs-6 #{ model.stats.classes[2] ? model.stats.classes[2].count : 0 }
 			div.row.buttons-row
 				div.col-md-12
 					a.btn.btn-primary.btn-lg(href="/train") Start Training

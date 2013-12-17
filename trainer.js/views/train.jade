@@ -6,16 +6,16 @@ html(lang="en")
 	body
 		div.training-header
 			div.row
-				div.col-md-6
+				div.col-md-6.col-sm-5.col-xs-4
 					div.row
 						div.col-md-12.trained-page-title #{ model.page.title }
 					div.row
 						div.col-md-12
 							a(href="http://tvtropes.org/pmwiki/pmwiki.php/#{ model.page.url }") #{ model.page.url }
-				div.col-md-1
+				div.col-md-1.col-sm-2.col-xs-2
 					div.row #{ model.page.linkStats.inbound } inbound
 					div.row #{ model.page.linkStats.outbound } outbound
-				div.col-md-5
+				div.col-md-5.col-sm-5.col-xs-6
 					div.row
 						form.button-form(method="POST", action="/train/submit")
 							input(type="hidden", name="pageId", value="#{ model.page.id }")
