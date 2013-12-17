@@ -9,14 +9,18 @@ import "strconv"
 func main() {
 	initConfig()
 
-	statsFlag := flag.Bool("stats", false, "Display stats")
+	statsFlag := flag.Bool("stats", false, "Display stats.")
+	trainFlag := flag.Bool("train", false, "Listen to training request.")
+	guessFlag := flag.Int("guess", -1, "Guess the class of the page with the given id.")
 	flag.Parse()
-	
+
 	switch {
 	case *statsFlag:
-		printStats();
-	default:
-		listen();
+		printStats()
+	case *trainFlag:
+		listen()
+	case *guessFlag >= 0:
+		printGuess(*guessFlag)
 	}
 }
 
@@ -43,7 +47,7 @@ func listen() {
 			http.Error(writer, "Internal Server Error", 500)
 		}
 
-		err = train(pageId, class)
+		err = trainPage(pageId, class)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Failed to train data.")
 			reportError(writer, err)
@@ -59,17 +63,26 @@ func reportError(writer http.ResponseWriter, err error) {
 	http.Error(writer, "Internal Server Error", 500)
 }
 
+func printGuess(pageId int) {
+	guessedClass, err := guessPageClass(pageId)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to guess class:", err.Error())
+		return
+	}
+	fmt.Println(guessedClass, "-", getClassName(guessedClass))
+}
+
 func printStats() {
 	classifier, err := loadClassifier()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Cannot load classifier:", err.Error())
 	}
-	
+
 	fmt.Println(classifier.Learned(), "learned")
 	fmt.Println(classifier.Seen(), "seen")
 	wordCounts := classifier.WordCount()
-	fmt.Println(wordCounts[0], "trope")
-	fmt.Println(wordCounts[1], "not trope")
-	fmt.Println(wordCounts[2], "work")
-	fmt.Println(wordCounts[3], "not work")
+	fmt.Println(wordCounts[tropeIndex], "trope")
+	fmt.Println(wordCounts[notTropeIndex], "not trope")
+	fmt.Println(wordCounts[workIndex], "work")
+	fmt.Println(wordCounts[notWorkIndex], "not work")
 }

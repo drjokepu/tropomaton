@@ -14,9 +14,22 @@ const (
 	notWork  bayesian.Class = "not_work"
 )
 
+const (
+	tropeIndex    = 0
+	notTropeIndex = 1
+	workIndex     = 2
+	notWorkIndex  = 3
+)
+
+const (
+	tropeClass = 0
+	workClass  = 1
+	otherClass = 2
+)
+
 const classifierFilename = "classifier.dat"
 
-func train(pageId, class int) error {
+func trainPage(pageId, class int) error {
 	err := run(func(tx *sql.Tx) error {
 		page, err := getPage(pageId, tx)
 		if err != nil {
@@ -63,7 +76,7 @@ func train(pageId, class int) error {
 			fmt.Fprintln(os.Stderr, "Failed to save classifier to data file.")
 			return err
 		}
-		
+
 		fmt.Println(pageId, page.url, page.title, "---", class, bayesianClasses)
 
 		return nil
@@ -74,6 +87,47 @@ func train(pageId, class int) error {
 	}
 
 	return nil
+}
+
+func guessPageClass(pageId int) (int, error) {
+	var guessedClass int
+	err := run(func(tx *sql.Tx) error {
+		page, err := getPage(pageId, tx)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to get page from database.")
+			return err
+		}
+
+		err = acquireClassifierLock()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to acquire exclusive lock to classifier data file.")
+			return err
+		}
+
+		defer releaseClassifierLock()
+
+		classifier, err := loadClassifier()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to load classifier.")
+			return err
+		}
+
+		guessedClass = guessDocumentClass(getDocument(page.text), classifier)
+
+		err = saveClassifier(classifier)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Failed to save classifier to data file.")
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return -1, err
+	}
+
+	return guessedClass, nil
 }
 
 func openClassifier() (int, error) {
@@ -144,15 +198,50 @@ func learnInClass(doc []string, class bayesian.Class, classifier *bayesian.Class
 
 func getBayesianClasses(class int) []bayesian.Class {
 	switch class {
-	case 0:
+	case tropeClass:
 		return []bayesian.Class{trope, notWork}
-	case 1:
+	case workClass:
 		return []bayesian.Class{notTrope, work}
 	default:
 		return []bayesian.Class{notTrope, notWork}
 	}
 }
 
+func getClassName(class int) string {
+	switch class {
+	case tropeClass:
+		return "trope"
+	case workClass:
+		return "work"
+	default:
+		return "other"
+	}
+}
+
 func getDocument(text string) []string {
 	return strings.Split(text, " ")
+}
+
+func guessDocumentClass(doc []string, classifier *bayesian.Classifier) int {
+	scores, _, _ := classifier.LogScores(doc)
+	isTrope := scores[tropeIndex] > scores[notTropeIndex]
+	isWork := scores[workIndex] > scores[notWorkIndex]
+
+	if isTrope {
+		if isWork {
+			if scores[tropeIndex] >= scores[workIndex] {
+				return tropeClass
+			} else {
+				return workClass
+			}
+		} else {
+			return tropeClass
+		}
+	} else {
+		if isWork {
+			return workClass
+		} else {
+			return otherClass
+		}
+	}
 }
