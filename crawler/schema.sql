@@ -26,3 +26,8 @@ create table link (
 create index idx_link_href on link(href);
 create index idx_link_page_from on link(page_from);
 create index idx_link_page_to on link(page_to);
+	
+create or replace view nlink as
+	select page_from p0, page_to p1 from link where page_from <> page_to
+	union
+	select page_to p0, page_from p1 from link where page_from <> page_to;
