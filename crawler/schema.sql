@@ -27,7 +27,22 @@ create index idx_link_href on link(href);
 create index idx_link_page_from on link(page_from);
 create index idx_link_page_to on link(page_to);
 	
-create or replace view nlink as
-	select page_from p0, page_to p1 from link where page_from <> page_to
-	union
-	select page_to p0, page_from p1 from link where page_from <> page_to;
+create table nlink (
+	id serial not null,
+	link_id int not null,
+	page_0 int not null,
+	page_1 int not null,
+	constraint pk_nlink primary key (id),
+	constraint fk_nlink_link foreign key (link_id) 
+		references link (id) on update cascade on delete cascade, 
+	constraint fk_nlink_page_0 foreign key (page_0) 
+		references page (id) on update cascade on delete cascade, 
+	constraint fk_nlink_page_1 foreign key (page_1) 
+		references page (id) on update cascade on delete cascade
+);
+
+create index idx_nlink_link_id on nlink(link_id);
+create index idx_nlink_page_0 on nlink(page_0, page_1);
+create index idx_nlink_page_1 on nlink(page_1, page_0);
+	
+insert into nlink (link_id, page_0, page_1) select id, page_from, page_to from link union select id, page_to, page_from from link;
