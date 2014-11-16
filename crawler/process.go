@@ -1,6 +1,10 @@
 package main
 
+import "fmt"
+
 func process(url string, getAllLinks bool) error {
+	fmt.Printf("%v\n", url)
+
 	htmlChannel := make(chan string)
 	errorChannel := make(chan error)
 	go fetch(url, htmlChannel, errorChannel)
